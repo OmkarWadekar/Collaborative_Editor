@@ -3,11 +3,13 @@ import { useEffect, useState } from 'react';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
-import { Box } from '@mui/material';
+import { Box, Button } from '@mui/material';
 import styled from '@emotion/styled';
 
 import { io } from 'socket.io-client';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+// const { id } = useParams();
 
 const Component = styled.div`
     background: #F5F5F5;
@@ -38,13 +40,27 @@ const Editor = () => {
     const [socket, setSocket] = useState();
     const [quill, setQuill] = useState();
     const { id } = useParams();
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        localStorage.clear();
+        navigate('/');
+    };
 
     useEffect(() => {
         const quillServer = new Quill('#container', { theme: 'snow', modules: { toolbar: toolbarOptions } });
         quillServer.disable();
-        quillServer.setText('Loading the document...')
+        quillServer.setText('Loading the document...');
         setQuill(quillServer);
     }, []);
+
+    useEffect(() => {
+        // Disconnect the socket when the route changes
+        return () => {
+            socket && socket.disconnect();
+        };
+    }, [socket, location]);
 
     useEffect(() => {
         const socketServer = io('http://localhost:9000');
@@ -108,8 +124,26 @@ const Editor = () => {
         }
     }, [socket, quill]);
 
+    useEffect(() => {
+        // Create a new socket connection
+        const socket = io('http://localhost:9000');
+        const disconnectSocket = (socket) => {
+            if (socket) {
+                socket.disconnect();
+            }
+        };
+        // Your existing code for handling socket events...
+
+        // Return a cleanup function that disconnects the socket when the component unmounts
+        return () => {
+            disconnectSocket(socket);
+        };
+    }, []); // Empty dependency array to run this effect only once
+
+
     return (
         <Component>
+            <Button onClick={handleLogout}> Logout </Button>
             <Box className='container' id='container'></Box>
         </Component>
     )
